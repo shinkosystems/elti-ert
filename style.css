@@ -1,10 +1,12 @@
 body {
     font-family: Arial, sans-serif;
-    padding: 20px;
+    padding: 0px;
     background-color: #ffffff;
 }
 
 .editor-container {
+    display: block;
+    justify-content: center;
     background-color: #fff;
     border: 0px solid #ccc;
     border-radius: 40px;
