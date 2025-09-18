@@ -10,35 +10,11 @@
 
     <div class="editor-container">
         <div class="toolbar">
-            <button onclick="formatDoc('bold')"><b>B</b></button>
-            <button onclick="formatDoc('italic')"><i>I</i></button>
-            <button onclick="formatDoc('underline')"><u>U</u></button>
-            <button onclick="formatDoc('justifyLeft')">Alinhar à Esquerda</button>
-            <button onclick="formatDoc('justifyCenter')">Centralizar</button>
-            <button onclick="formatDoc('justifyRight')">Alinhar à Direita</button>
-            <button onclick="formatDoc('insertOrderedList')">Lista Num.</button>
-            <button onclick="formatDoc('insertUnorderedList')">Lista Ptos.</button>
-            <button onclick="formatDoc('createLink', prompt('Insira o URL:'))">Link</button>
 
-            <select id="fontSizeSelect" onchange="formatFontSize()">
-                <option value="1">10</option>
-                <option value="2">12</option>
-                <option value="3" selected>14</option>
-                <option value="4">16</option>
-                <option value="5">18</option>
-                <option value="6">20</option>
-                <option value="7">24</option>
-            </select>
-                
-            <select onchange="formatDoc('fontName', this.value)">
-                <option value="Arial" selected>Arial</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Verdana">Verdana</option>
-            </select>
-
+            <p class="texto-toolbar">_Palavra_  /  *Significado*</p>
             <button id="saveMemoryHackButton">Salvar Palavras e Significados</button>
             <button id="saveHtmlButton">Salvar Texto Completo</button>
+            <p class="texto-toolbar">+Palavra Clicável+</p>
 
         </div>
         
