@@ -6,19 +6,25 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 // Referência ao elemento do editor
 const editor = document.getElementById('editor');
 
-// Função para obter parâmetros da URL
+// --- FUNÇÃO CORRIGIDA: Obtém ID do Parâmetro de Consulta (?id=) ---
 function getUrlParameter(name) {
     name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
     var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
     var results = regex.exec(location.search);
-    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    // Decodifica o valor e remove as aspas duplas, caso o FlutterFlow as inclua
+    return results === null ? null : decodeURIComponent(results[1].replace(/\+/g, ' ')).replace(/"/g, ''); 
 }
 
-const lessonId = getUrlParameter('lesson_id');
+// O lessonId agora é buscado usando o nome do parâmetro 'id'
+const lessonId = getUrlParameter('id'); 
 
-// --- FUNÇÃO DE CARREGAMENTO CONDICIONAL (NOVA LÓGICA) ---
+// DEBUG: Remova esta linha após confirmar o funcionamento
+console.log("ID da Aula Recebido (Query Param 'id'):", lessonId); 
+
+
+// --- FUNÇÃO DE CARREGAMENTO CONDICIONAL ---
 async function loadInitialContent() {
-    // Se não houver ID, apenas mostra o hint text.
+    // Se não houver ID (null), apenas mostra o hint text.
     if (!lessonId) {
         editor.innerHTML = '<p>Digite aqui...</p>';
         return;
@@ -48,7 +54,6 @@ document.addEventListener('DOMContentLoaded', loadInitialContent);
 
 
 // --- LÓGICA DO HINT TEXT ---
-// Garante que o hint text suma ao clicar e retorne se ficar vazio
 editor.addEventListener('focus', () => {
     const hintText = '<p>Digite aqui...</p>';
     if (editor.innerHTML.trim() === hintText || editor.innerHTML.trim() === 'Digite aqui...') {
@@ -101,7 +106,7 @@ function clearEditor() {
 }
 
 
-// --- LÓGICA DE SALVAR O HTML (UPDATE PARA readingphtml) ---
+// --- LÓGICA DE SALVAR O HTML ---
 document.getElementById('saveHtmlButton').addEventListener('click', async () => {
     if (!lessonId) {
         alert("Erro: ID da aula não encontrado. O conteúdo não pode ser salvo.");
@@ -120,7 +125,7 @@ document.getElementById('saveHtmlButton').addEventListener('click', async () => 
     const { data, error } = await supabase
         .from('aulaplus')
         .update({
-            readingphtml: fullContent // Coluna alterada para 'readingphtml'
+            readingphtml: fullContent
         })
         .eq('id', lessonId); 
 
