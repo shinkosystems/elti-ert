@@ -1,25 +1,70 @@
 // 1. Configurar o cliente Supabase - Use suas chaves e URL reais
 const supabaseUrl = 'https://qazjyzqptdcnuezllbpr.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhemp5enFwdGRjbnVlemxsYnByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDEyMDY4NTQsImV4cCI6MjA2NDEyMDY4NTQxMjE1Mn0.H6v1HUH-LkHDH-WaaLQyN8GMeNLk0V27VJzHuXHin9M';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhemp5enFwdGRjbnVlemxsYnByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1NDY4NTQsImV4cCI6MjA2NDEyMjg1NH0.H6v1HUH-LkHDH-WaaLQyN8GMeNLk0V27VJzHuXHin9M';
 const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
 // Referência ao elemento do editor
 const editor = document.getElementById('editor');
 
+// Função para obter parâmetros da URL
+function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    var results = regex.exec(location.search);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+}
+
+const lessonId = getUrlParameter('lesson_id');
+
+// --- FUNÇÃO DE CARREGAMENTO CONDICIONAL (NOVA LÓGICA) ---
+async function loadInitialContent() {
+    // Se não houver ID, apenas mostra o hint text.
+    if (!lessonId) {
+        editor.innerHTML = '<p>Digite aqui...</p>';
+        return;
+    }
+
+    // Busca o valor atual de 'readingphtml' na tabela aulaplus
+    const { data, error } = await supabase
+        .from('aulaplus')
+        .select('readingphtml')
+        .eq('id', lessonId)
+        .single();
+
+    if (error) {
+        console.error('Erro ao carregar o conteúdo inicial:', error.message);
+        editor.innerHTML = '<p>Erro ao carregar o conteúdo. Digite aqui...</p>';
+    } else if (data && data.readingphtml) {
+        // Se a coluna tiver valor, exibe o conteúdo salvo.
+        editor.innerHTML = data.readingphtml;
+    } else {
+        // Se a coluna for NULL ou vazia, exibe o hint text.
+        editor.innerHTML = '<p>Digite aqui...</p>';
+    }
+}
+
+// Executa a função de carregamento ao iniciar o script
+document.addEventListener('DOMContentLoaded', loadInitialContent);
+
+
 // --- LÓGICA DO HINT TEXT ---
+// Garante que o hint text suma ao clicar e retorne se ficar vazio
 editor.addEventListener('focus', () => {
-    if (editor.textContent.trim() === 'Digite aqui') {
-        editor.textContent = '';
+    const hintText = '<p>Digite aqui...</p>';
+    if (editor.innerHTML.trim() === hintText || editor.innerHTML.trim() === 'Digite aqui...') {
+        editor.innerHTML = '';
     }
 });
 
 editor.addEventListener('blur', () => {
-    if (editor.textContent.trim() === '') {
-        editor.textContent = 'Digite aqui';
+    const hintText = '<p>Digite aqui...</p>';
+    if (editor.innerHTML.trim() === '' || editor.innerHTML.trim() === '<p></p>') {
+        editor.innerHTML = hintText;
     }
 });
 
-// Funções para manipulação de texto
+
+// Funções auxiliares (mantidas)
 function formatDoc(command, value = null) {
     if (command === 'createLink') {
         const url = prompt('Insira o URL:');
@@ -52,29 +97,22 @@ function findAsteriskText(text) {
 }
 
 function clearEditor() {
-    editor.innerHTML = '<p>Digite aqui</p>';
+    editor.innerHTML = '<p>Digite aqui...</p>';
 }
 
-// NOVO: Função para obter parâmetros da URL
-function getUrlParameter(name) {
-    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-    var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-    var results = regex.exec(location.search);
-    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-}
 
-const lessonId = getUrlParameter('lesson_id');
-
-// --- LÓGICA DE SALVAR O HTML (AGORA COM UPDATE) ---
+// --- LÓGICA DE SALVAR O HTML (UPDATE PARA readingphtml) ---
 document.getElementById('saveHtmlButton').addEventListener('click', async () => {
     if (!lessonId) {
-        alert("Erro: ID da aula não encontrado. Certifique-se de que a aula foi criada primeiro.");
+        alert("Erro: ID da aula não encontrado. O conteúdo não pode ser salvo.");
         return;
     }
 
     const fullContent = editor.innerHTML;
+    const hintText = '<p>Digite aqui...</p>';
 
-    if (fullContent.trim() === '<p>Digite aqui</p>' || fullContent.trim() === 'Digite aqui') {
+    // Condição para evitar salvar o hint text
+    if (fullContent.trim() === hintText || fullContent.trim() === 'Digite aqui...') {
         alert("O editor está vazio. Digite algum conteúdo para salvar.");
         return;
     }
@@ -82,9 +120,9 @@ document.getElementById('saveHtmlButton').addEventListener('click', async () => 
     const { data, error } = await supabase
         .from('aulaplus')
         .update({
-            grammarphtml: fullContent
+            readingphtml: fullContent // Coluna alterada para 'readingphtml'
         })
-        .eq('id', lessonId); // Atualiza a linha com o ID correspondente
+        .eq('id', lessonId); 
 
     if (error) {
         console.error('Erro ao salvar o HTML no Supabase:', error.message);
@@ -92,14 +130,12 @@ document.getElementById('saveHtmlButton').addEventListener('click', async () => 
     } else {
         console.log('HTML salvo com sucesso:', data);
         alert('O conteúdo da aula foi salvo com sucesso!');
-        clearEditor();
     }
 });
 
-// --- LÓGICA DE SALVAR PALAVRAS E SIGNIFICADOS ---
+// --- LÓGICA DE SALVAR PALAVRAS E SIGNIFICADOS (MANTIDA) ---
 document.getElementById('saveMemoryHackButton').addEventListener('click', async () => {
     const rawText = editor.innerText;
-
     const extractedUnderlines = findUnderlinedText(rawText);
     const extractedAsterisks = findAsteriskText(rawText);
 
@@ -107,7 +143,6 @@ document.getElementById('saveMemoryHackButton').addEventListener('click', async 
         alert("O texto precisa ter palavras entre underlines e asteriscos para salvar.");
         return;
     }
-
     if (extractedUnderlines.length !== extractedAsterisks.length) {
         alert("O número de palavras com underline e asterisco não corresponde. Verifique seu texto.");
         return;
