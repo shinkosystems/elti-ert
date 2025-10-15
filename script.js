@@ -177,3 +177,19 @@ function formatFontSize() {
     const selectedSize = fontSizeSelect.value;
     document.execCommand('fontSize', false, selectedSize);
 }
+
+
+// =========================================================
+// --- NOVO BLOCO: LÓGICA PARA LIMPAR TEXTO COLADO (ANTI-TAGS) ---
+// =========================================================
+editor.addEventListener('paste', function (e) {
+    // 1. Previne a ação de colagem padrão do navegador (que insere a formatação)
+    e.preventDefault();
+
+    // 2. Obtém o conteúdo de texto puro da área de transferência
+    const text = (e.clipboardData || window.clipboardData)
+        .getData('text/plain');
+
+    // 3. Insere o texto puro na posição atual do cursor
+    document.execCommand('insertText', false, text);
+});
