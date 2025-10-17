@@ -24,13 +24,13 @@ console.log("ID da Aula Recebido (Query Param 'id'):", lessonId);
 
 // --- FUNÇÃO DE CARREGAMENTO CONDICIONAL ---
 async function loadInitialContent() {
-    // Se não houver ID (null), apenas mostra o hint text.
+    // Nota: O editor.innerHTML é usado aqui porque o Supabase pode retornar texto
+    // que foi originalmente salvo como HTML (ou puro).
     if (!lessonId) {
         editor.innerHTML = '<p>Digite aqui...</p>';
         return;
     }
 
-    // Busca o valor atual de 'readingphtml' na tabela aulaplus
     const { data, error } = await supabase
         .from('aulaplus')
         .select('readingphtml')
@@ -41,10 +41,11 @@ async function loadInitialContent() {
         console.error('Erro ao carregar o conteúdo inicial:', error.message);
         editor.innerHTML = '<p>Erro ao carregar o conteúdo. Digite aqui...</p>';
     } else if (data && data.readingphtml) {
-        // Se a coluna tiver valor, exibe o conteúdo salvo.
-        editor.innerHTML = data.readingphtml;
+        // Se a coluna tiver valor, exibe o conteúdo.
+        // Se você estava salvando HTML, use innerHTML. Se agora for salvar SÓ texto
+        // você pode precisar ajustar como o FlutterFlow/APP interpreta este campo.
+        editor.innerHTML = data.readingphtml; 
     } else {
-        // Se a coluna for NULL ou vazia, exibe o hint text.
         editor.innerHTML = '<p>Digite aqui...</p>';
     }
 }
@@ -53,18 +54,21 @@ async function loadInitialContent() {
 document.addEventListener('DOMContentLoaded', loadInitialContent);
 
 
-// --- LÓGICA DO HINT TEXT ---
+// --- LÓGICA DO HINT TEXT (AJUSTADA PARA FUNCIONAR COM O SALVAMENTO DE TEXTO PURO) ---
+const HINT_HTML = '<p>Digite aqui...</p>';
+const HINT_TEXT_PURA = 'Digite aqui...';
+
 editor.addEventListener('focus', () => {
-    const hintText = '<p>Digite aqui...</p>';
-    if (editor.innerHTML.trim() === hintText || editor.innerHTML.trim() === 'Digite aqui...') {
+    // Verifica o innerHTML e o innerText para cobrir diferentes estados
+    if (editor.innerHTML.trim() === HINT_HTML || editor.innerText.trim() === HINT_TEXT_PURA) {
         editor.innerHTML = '';
     }
 });
 
 editor.addEventListener('blur', () => {
-    const hintText = '<p>Digite aqui...</p>';
+    // Se estiver vazio (sem tags ou texto)
     if (editor.innerHTML.trim() === '' || editor.innerHTML.trim() === '<p></p>') {
-        editor.innerHTML = hintText;
+        editor.innerHTML = HINT_HTML;
     }
 });
 
@@ -102,22 +106,25 @@ function findAsteriskText(text) {
 }
 
 function clearEditor() {
-    editor.innerHTML = '<p>Digite aqui...</p>';
+    editor.innerHTML = HINT_HTML;
 }
 
 
-// --- LÓGICA DE SALVAR O HTML ---
+// =========================================================
+// --- LÓGICA DE SALVAR O HTML (AGORA SALVA APENAS TEXTO PURO) ---
+// =========================================================
 document.getElementById('saveHtmlButton').addEventListener('click', async () => {
     if (!lessonId) {
         alert("Erro: ID da aula não encontrado. O conteúdo não pode ser salvo.");
         return;
     }
 
-    const fullContent = editor.innerHTML;
-    const hintText = '<p>Digite aqui...</p>';
+    // *** MUDANÇA CRÍTICA: PEGANDO O TEXTO PURO ***
+    const fullContent = editor.innerText.trim();
+    const hintText = HINT_TEXT_PURA;
 
     // Condição para evitar salvar o hint text
-    if (fullContent.trim() === hintText || fullContent.trim() === 'Digite aqui...') {
+    if (fullContent === hintText) {
         alert("O editor está vazio. Digite algum conteúdo para salvar.");
         return;
     }
@@ -125,15 +132,16 @@ document.getElementById('saveHtmlButton').addEventListener('click', async () => 
     const { data, error } = await supabase
         .from('aulaplus')
         .update({
-            readingphtml: fullContent
+            // Salva a string de texto puro (sem tags)
+            readingphtml: fullContent 
         })
         .eq('id', lessonId); 
 
     if (error) {
-        console.error('Erro ao salvar o HTML no Supabase:', error.message);
-        alert('Ocorreu um erro ao salvar o HTML.');
+        console.error('Erro ao salvar o texto puro no Supabase:', error.message);
+        alert('Ocorreu um erro ao salvar o texto.');
     } else {
-        console.log('HTML salvo com sucesso:', data);
+        console.log('Texto puro salvo com sucesso:', data);
         alert('O conteúdo da aula foi salvo com sucesso!');
     }
 });
@@ -143,6 +151,8 @@ document.getElementById('saveMemoryHackButton').addEventListener('click', async 
     const rawText = editor.innerText;
     const extractedUnderlines = findUnderlinedText(rawText);
     const extractedAsterisks = findAsteriskText(rawText);
+    // ... (restante da sua lógica, que já usa innerText)
+    // ...
 
     if (extractedUnderlines.length === 0 || extractedAsterisks.length === 0) {
         alert("O texto precisa ter palavras entre underlines e asteriscos para salvar.");
@@ -180,7 +190,7 @@ function formatFontSize() {
 
 
 // =========================================================
-// --- NOVO BLOCO: LÓGICA PARA LIMPAR TEXTO COLADO (ANTI-TAGS) ---
+// --- LÓGICA PARA LIMPAR TEXTO COLADO (MANTIDA) ---
 // =========================================================
 editor.addEventListener('paste', function (e) {
     // 1. Previne a ação de colagem padrão do navegador (que insere a formatação)
@@ -193,3 +203,6 @@ editor.addEventListener('paste', function (e) {
     // 3. Insere o texto puro na posição atual do cursor
     document.execCommand('insertText', false, text);
 });
+
+// Nota: O bloco keydown para o Enter foi removido, pois o foco agora é
+// salvar o texto puro (innerText), o que elimina tags de qualquer forma.
